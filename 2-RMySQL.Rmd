@@ -1,0 +1,108 @@
+---
+title: "RMySQL in RStudio"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(Lahman)
+```
+
+In the previous post I demonstrated how to install and use `MySQL` from the command line. In this tutorial I will show you how to set up and query a relational database from RStudio.
+
+## The database
+
+These queries are done using the Lahman baseball open data set available [here](https://github.com/chadwickbureau/baseballdatabank). 
+
+I chose these data because 1) they are open to anyone and can be run on your local machine, not behind a vpn, and 2) it is available as .csv files for loading into any statistical software. 
+
+## Connecting to databases with RStudio
+
+For this tutorial I will be using a local instance of MySQL through the `DBI`, `dplyr`, and `RMySQL` packages. A `DBI` connection is built below to my local instance of `MySQL`. 
+
+```{r packages}
+library(DBI)
+library(RMySQL)
+library(RMariaDB)
+library(dplyr)
+library(rstudioapi)
+```
+
+
+## Connect to `MySQL` with `DBI::dbConnect()`
+
+The first connection will be done with the `DBI` package. 
+
+```{r LahmanDBIMySQL}
+LahmanDBIMySQL <- dbConnect(MySQL(), 
+                    dbname = "lahman2016", 
+                    host = "localhost", 
+                    user = "root", 
+                    # password = "%LWGma9c"
+                    password = rstudioapi::askForPassword("Database password")
+                    )
+LahmanDBIMySQL
+```
+
+Create an object from `Lahman::Master`.
+
+```{r Master}
+Master <- Lahman::Master
+Master %>% glimpse(78)
+```
+
+Create another object from `Lahman::Batting`.
+
+```{r Batting}
+Batting <- Lahman::Batting
+Batting %>% dplyr::glimpse(78)
+```
+
+This `MySQL` statement creates a data frame of the Griffeys (father and son).
+
+```sql
+SELECT 
+  -- Master columns
+  mas.playerID, 
+  mas.birthYear, 
+  mas.nameFirst, 
+  mas.nameLast, 
+  mas.weight, 
+  mas.height, 
+  mas.bats, 
+  mas.throws, 
+  mas.retroID, 
+  mas.bbrefID,
+  -- Batting columns
+  bat.teamID,
+  bat.lgID,
+  bat.yearID,
+  bat.G,
+  bat.AB,
+  bat.R,
+  bat.H,
+  bat.HR,
+  bat.RBI,
+  bat.BB,
+  bat.SO
+  
+FROM 
+    Master AS mas
+      INNER JOIN 
+    Batting AS bat ON mas.playerID = bat.playerID
+  WHERE nameLast = "Griffey";
+```
+
+And this creates the same table using `dplyr` commands. 
+
+```{r Griffey-select}
+Master %>% 
+    dplyr::select(playerID, birthYear, nameFirst, nameLast,
+                  weight, height, bats, throws, retroID, bbrefID) %>% 
+    dplyr::filter(nameLast %in% "Griffey") %>% 
+    dplyr::inner_join(x = ., y = Batting, by = "playerID") %>% 
+    dplyr::select(teamID, lgID, yearID, G, AB, 
+                  R, H, HR, RBI, BB, SO) %>% dplyr::glimpse(78)
+```
+
