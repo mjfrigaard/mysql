@@ -44,8 +44,6 @@ These commands are entered into Terminal.
 $ brew install unixodbc
 # SQL Server ODBC Drivers (Free TDS)
 $ brew install freetds --with-unixodbc
-# SQL Server ODBC Drivers (Free TDS)
-$ brew install freetds --with-unixodbc
 # PostgreSQL ODBC ODBC Drivers
 $ brew install psqlodbc
 # SQLite ODBC Drivers

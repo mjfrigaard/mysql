@@ -9,17 +9,17 @@ library(tidyverse)
 library(Lahman)
 ```
 
-In the previous post I demonstrated how to install and use `MySQL` from the command line. In this tutorial I will show you how to set up and query a relational database from RStudio.
+In the previous post I demonstrated how to install and use `MySQL` from the command line. In this tutorial I will show you how to set up and query a relational database management system (RDBMS) from RStudio.
 
 ## The database
 
-These queries are done using the Lahman baseball open data set available [here](https://github.com/chadwickbureau/baseballdatabank). 
+These queries are done using the Lahman baseball data set available [here](http://www.seanlahman.com/baseball-archive/statistics/). 
 
-I chose these data because 1) they are open to anyone and can be run on your local machine, not behind a vpn, and 2) it is available as .csv files for loading into any statistical software. 
+I chose these data because 1) they are open to anyone and can be run on your local machine, and 2) they are available as a .sql file and .csv files for loading into any RDBMS software. 
 
-## Connecting to databases with RStudio
+## Database packages in RStudio
 
-For this tutorial I will be using a local instance of MySQL through the `DBI`, `dplyr`, and `RMySQL` packages. A `DBI` connection is built below to my local instance of `MySQL`. 
+For this tutorial I will be using a local instance of `MySQL` with help from the `DBI`, `dplyr`, and `RMySQL` packages.  
 
 ```{r packages}
 library(DBI)
@@ -27,82 +27,248 @@ library(RMySQL)
 library(RMariaDB)
 library(dplyr)
 library(rstudioapi)
+library(ggthemes)
 ```
 
+
+## Change MySQL settings 
+
+Before we can connect to a database with RStudio, we need to change a few settings for MySQL in the **System Preferences**.
+
+Select **MySQL** >> **Initialize Database** 
+
+Now enter a new password for the **root** user and select **Use Legacy Password Encryption**. Then click **Start MySQL Sever**.
 
 ## Connect to `MySQL` with `DBI::dbConnect()`
 
-The first connection will be done with the `DBI` package. 
+A `DBI` connection is built below to my local instance of `MySQL`.
 
 ```{r LahmanDBIMySQL}
-LahmanDBIMySQL <- dbConnect(MySQL(), 
+LahmanDBIMySQL <- DBI::dbConnect(MySQL(), 
                     dbname = "lahman2016", 
                     host = "localhost", 
                     user = "root", 
-                    # password = "%LWGma9c"
-                    password = rstudioapi::askForPassword("Database password")
-                    )
+                  # rstudioapi::askForPassword(prompt = "database password"))
+                    password = "Med!c012")
 LahmanDBIMySQL
 ```
 
-Create an object from `Lahman::Master`.
+As I can see, this is a `<MySQLConnection:0,1>`. This is the object we will use to access the `lahman2016` database.
 
-```{r Master}
+## Querying a database from RStudio
+
+We can get a list of tables in the `lahman2016` database by using the `DBI::dbListTables()` function. 
+
+```{r dbListTables}
+DBI::dbListTables(LahmanDBIMySQL)
+```
+
+This is similar to the `SHOW TABLES;` command in `MySQL`. In the previous tutorial, I built a table of statistics on Ken Griffey Junior and Senior in the Lahman database. The `Griffeys` table contains following fields.
+
+```{r dbListFields}
+DBI::dbListFields(LahmanDBIMySQL, "Griffeys") 
+```
+
+Queries can be passed directly to the `DBI::dbGetQuery()` function, like the `SELECT` statement below.
+
+```{r select-query}
+DBI::dbGetQuery(LahmanDBIMySQL, "SELECT * FROM Griffeys;") %>%
+  dplyr::glimpse(78)
+```
+
+
+I realize I don't have all the columns I want from the `Batting` and `Fielding` tables, so I will query `lahman2016` again to collect these data. 
+
+## Aliasing columns in MySQL tables
+
+There are three columns in the `Batting` table I want to add to `Griffeys`: `SF`, `2B`, and `3B`. Two of these names violate naming rules in R. 
+
+```{r list-fields-Batting}
+DBI::dbListFields(LahmanDBIMySQL, "Batting") 
+```
+
+The `2B` and `3B` columns contain the number of doubles and triples for each player, and `SF` is the number of sacrifice flies. Unfortunately, R won't allow columns to have names that start with a number. I can write a query to inlcude these columns, but use an alias to create R-friendly column names. 
+
+```{r add-doubles-triples-Griffeys}
+DBI::dbGetQuery(LahmanDBIMySQL, "SELECT 
+  grf.playerID, 
+  grf.birthYear, 
+  grf.nameFirst, 
+  grf.nameLast, 
+  grf.weight, 
+  grf.height, 
+  grf.bats, 
+  grf.throws, 
+  grf.lgID,
+  grf.yearID,
+  grf.teamID,
+  grf.G,
+  grf.AB,
+  grf.R,
+  grf.H,
+  grf.HR,
+  grf.RBI,
+  grf.BB,
+  grf.SO,
+  bat.2B AS dubs,
+  bat.3B AS trips,
+  bat.SF AS sac_flies
+  FROM Griffeys AS grf
+    INNER JOIN Batting AS bat
+     ON grf.playerID = bat.playerID
+     AND grf.yearID = bat.yearID
+     AND grf.teamID = bat.teamID;") %>% glimpse(78)
+```
+
+## Storing SQL in character vectors
+
+I can also assign the query above to a character vector (`batting_query`) and pass the vector to the `DBI::dbGetQuery()` function. I will assign these new variables to the `Griffeys` table.
+
+```{r batting_query}
+batting_query <- "SELECT 
+  grf.playerID, 
+  grf.birthYear, 
+  grf.nameFirst, 
+  grf.nameLast, 
+  grf.weight, 
+  grf.height, 
+  grf.bats, 
+  grf.throws, 
+  grf.lgID,
+  grf.yearID,
+  grf.teamID,
+  grf.G,
+  grf.AB,
+  grf.R,
+  grf.H,
+  grf.HR,
+  grf.RBI,
+  grf.BB,
+  grf.SO,
+  bat.2B AS dubs,
+  bat.3B AS trips,
+  bat.SF AS sac_flies
+  FROM Griffeys AS grf
+    INNER JOIN Batting AS bat
+     ON grf.playerID = bat.playerID
+     AND grf.yearID = bat.yearID
+     AND grf.teamID = bat.teamID;"
+Griffeys <- DBI::dbGetQuery(LahmanDBIMySQL, batting_query) 
+Griffeys %>% glimpse(78)
+```
+
+Now that we see the SQL works and these two tables are joined, we can calculate a few new statistics in R.
+
+## Calculating On-base plus slugging (OPS) 
+
+A players [on-base plus slugging (OPS)](https://en.wikipedia.org/wiki/On-base_plus_slugging) is a measure of their overall batting performance. This is the sum of the player's on-base percentage and slugging average. The steps to calculate this statsitic are below. 
+
+```{r GriffsOPSbyYear}
+GriffsOPSbyYear <- Griffeys %>% 
+  dplyr::mutate(
+    # slugging percentage
+    slug_perc = (H - dubs - trips - HR + 2 * dubs + 3 * trips + 4 * HR) / AB,
+    # convert sac_flies to numeric
+    sac_flies = as.numeric(sac_flies),
+    # On Base Percentage
+    ob_perc = (H + BB) / (H + AB + BB + sac_flies),
+    # On-base plus slugging
+    obslug_perc = slug_perc + ob_perc,
+    # create a nameID
+    nameID = 
+      case_when(
+        birthYear == 1950 ~ "Ken Griffey Sr",
+        birthYear == 1969 ~ "Ken Griffey Jr"),
+    # convert to a factor
+    nameID = factor(nameID), 
+    # make KGSr the reference
+    nameID = relevel(nameID, ref = "Ken Griffey Sr"))
+```
+
+I created a few intermediate calculations before creating `obslug_perc`, and I also created a `nameID` so the two players can be easily graphed. Below is the on-base plus slugging (OPS) statistic for both Griffeys over their career. 
+
+```{r plot-obs-by-year}
+GriffsOPSbyYear %>% 
+  ggplot2::ggplot(aes(x = yearID, y = obslug_perc, 
+                      group = nameID, color = teamID)) +  
+  geom_line() + 
+  ggplot2::facet_grid(. ~ nameID, scales = "free") + 
+  ggplot2::labs(
+    title = "The Griffey's career on-base plus slugging (OPS)"
+  ) + ggthemes::theme_fivethirtyeight()
+```
+
+## The Lahman package in R
+
+There is also a `Lahman` package in R. I will use this below to demonstrate some of the similarities between `dplyr` and `MySQL` syntax. 
+
+Create an object for the `Lahman::Master`, `Lahman::Fielding`, and `Lahman::Batting` tables. 
+
+```{r Master-Batting-FieldingData}
 Master <- Lahman::Master
-Master %>% glimpse(78)
-```
-
-Create another object from `Lahman::Batting`.
-
-```{r Batting}
 Batting <- Lahman::Batting
-Batting %>% dplyr::glimpse(78)
+Fielding <- Lahman::Fielding
 ```
 
-This `MySQL` statement creates a data frame of the Griffeys (father and son).
 
-```sql
-SELECT 
-  -- Master columns
-  mas.playerID, 
-  mas.birthYear, 
-  mas.nameFirst, 
-  mas.nameLast, 
-  mas.weight, 
-  mas.height, 
-  mas.bats, 
-  mas.throws, 
-  mas.retroID, 
-  mas.bbrefID,
-  -- Batting columns
-  bat.teamID,
-  bat.lgID,
-  bat.yearID,
-  bat.G,
-  bat.AB,
-  bat.R,
-  bat.H,
-  bat.HR,
-  bat.RBI,
-  bat.BB,
-  bat.SO
-  
-FROM 
-    Master AS mas
-      INNER JOIN 
-    Batting AS bat ON mas.playerID = bat.playerID
-  WHERE nameLast = "Griffey";
-```
+The code below creates the same tables and graph using `dplyr` commands. 
 
-And this creates the same table using `dplyr` commands. 
-
-```{r Griffey-select}
-Master %>% 
-    dplyr::select(playerID, birthYear, nameFirst, nameLast,
-                  weight, height, bats, throws, retroID, bbrefID) %>% 
+```{r Griffey-GriffeyOPSPlot}
+GriffeyOPSPlot <- Master %>% 
+    dplyr::select(playerID, 
+                  birthYear, 
+                  nameLast) %>% 
+  # find Griffeys
     dplyr::filter(nameLast %in% "Griffey") %>% 
-    dplyr::inner_join(x = ., y = Batting, by = "playerID") %>% 
-    dplyr::select(teamID, lgID, yearID, G, AB, 
-                  R, H, HR, RBI, BB, SO) %>% dplyr::glimpse(78)
+  # join to batting table
+    dplyr::inner_join(x = ., 
+                      y = Batting, 
+                      by = "playerID") %>% 
+  # select/rename relevant columns
+    dplyr::select(teamID,
+                  nameLast,
+                  playerID,
+                  birthYear,
+                  yearID,
+                  G,
+                  AB, 
+                  R, 
+                  H, 
+                  HR, 
+                  dubs = X2B, 
+                  trips = X3B, 
+                  RBI, 
+                  BB, 
+                  SO, 
+                  sac_flies = SF) %>% 
+    dplyr::mutate(
+    # slugging percentage
+    slug_perc = (H - dubs - trips - HR + 2 * dubs + 3 * trips + 4 * HR) / AB,
+    # convert sac_flies to numeric
+    sac_flies = as.numeric(sac_flies),
+    # On Base Percentage
+    ob_perc = (H + BB) / (H + AB + BB + sac_flies),
+    # On-base plus slugging
+    obslug_perc = slug_perc + ob_perc,
+    # create a nameID
+    nameID = 
+      case_when(
+        birthYear == 1950 ~ "Ken Griffey Sr",
+        birthYear == 1969 ~ "Ken Griffey Jr"),
+    # convert to a factor
+    nameID = factor(nameID), 
+    # make KGSr the reference
+    nameID = relevel(nameID, ref = "Ken Griffey Sr")) %>% 
+  # create plot of new OPS 
+  ggplot2::ggplot(aes(x = yearID, y = obslug_perc, 
+                      group = nameID, color = teamID)) +  
+  geom_line() + 
+  ggplot2::facet_grid(. ~ nameID, scales = "free") + 
+  ggplot2::labs(
+    title = "The Griffey's career on-base plus slugging (OPS)"
+  ) + 
+  ggthemes::theme_fivethirtyeight()
+ggplot2::ggsave(filename = "GriffeyOPSPlot.png",  width = 7, height = 5, units = "in")
 ```
 
+## End
