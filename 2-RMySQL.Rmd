@@ -1,12 +1,14 @@
 ---
 title: "RMySQL in RStudio"
-output: github_document
+output: markdowntemplates::hugo
+author: "Martin Frigaard"
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(Lahman)
+library(markdowntemplates)
 ```
 
 In the previous post I demonstrated how to install and use `MySQL` from the command line. In this tutorial I will show you how to set up and query a relational database management system (RDBMS) from RStudio.
@@ -39,7 +41,7 @@ Select **MySQL** >> **Initialize Database**
 
 Now enter a new password for the **root** user and select **Use Legacy Password Encryption**. Then click **Start MySQL Sever**.
 
-## Connect to `MySQL` with `DBI::dbConnect()`
+## Connect to MySQL with DBI::dbConnect()
 
 A `DBI` connection is built below to my local instance of `MySQL`.
 

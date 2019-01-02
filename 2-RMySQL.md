@@ -1,11 +1,18 @@
-RMySQL in RStudio
-================
-
+---
+author: 
+date: 
+slug: 
+status: draft
+title: RMySQL in RStudio
+categories:
+  - r
+---
 In the previous post I demonstrated how to install and use `MySQL` from
 the command line. In this tutorial I will show you how to set up and
 query a relational database management system (RDBMS) from RStudio.
 
-## The database
+The database
+------------
 
 These queries are done using the Lahman baseball data set available
 [here](http://www.seanlahman.com/baseball-archive/statistics/).
@@ -14,7 +21,8 @@ I chose these data because 1) they are open to anyone and can be run on
 your local machine, and 2) they are available as a .sql file and .csv
 files for loading into any RDBMS software.
 
-## Database packages in RStudio
+Database packages in RStudio
+----------------------------
 
 For this tutorial I will be using a local instance of `MySQL` with help
 from the `DBI`, `dplyr`, and `RMySQL` packages.
@@ -28,17 +36,19 @@ library(rstudioapi)
 library(ggthemes)
 ```
 
-## Change MySQL settings
+Change MySQL settings
+---------------------
 
 Before we can connect to a database with RStudio, we need to change a
 few settings for MySQL in the **System Preferences**.
 
-Select **MySQL** \>\> **Initialize Database**
+Select **MySQL** &gt;&gt; **Initialize Database**
 
 Now enter a new password for the **root** user and select **Use Legacy
 Password Encryption**. Then click **Start MySQL Sever**.
 
-## Connect to `MySQL` with `DBI::dbConnect()`
+Connect to `MySQL` with `DBI::dbConnect()`
+------------------------------------------
 
 A `DBI` connection is built below to my local instance of `MySQL`.
 
@@ -57,11 +67,11 @@ LahmanDBIMySQL
 As I can see, this is a `<MySQLConnection:0,1>`. This is the object we
 will use to access the `lahman2016` database.
 
-## Querying a database from RStudio
+Querying a database from RStudio
+--------------------------------
 
 We can get a list of tables in the `lahman2016` database by using the
-`DBI::dbListTables()`
-    function.
+`DBI::dbListTables()` function.
 
 ``` r
 DBI::dbListTables(LahmanDBIMySQL)
@@ -129,12 +139,12 @@ I realize I don’t have all the columns I want from the `Batting` and
 `Fielding` tables, so I will query `lahman2016` again to collect these
 data.
 
-## Aliasing columns in MySQL tables
+Aliasing columns in MySQL tables
+--------------------------------
 
 There are three columns in the `Batting` table I want to add to
 `Griffeys`: `SF`, `2B`, and `3B`. Two of these names violate naming
-rules in
-    R.
+rules in R.
 
 ``` r
 DBI::dbListFields(LahmanDBIMySQL, "Batting") 
@@ -207,7 +217,8 @@ DBI::dbGetQuery(LahmanDBIMySQL, "SELECT
     ## $ trips     <int> 1, 5, 9, 9, 8, 8, 4, 10, 6, 2, 3, 1, 4, 0, 3, 1, 0, 0, 3,…
     ## $ sac_flies <chr> "0", "0", "3", "3", "2", "3", "3", "5", "4", "3", "2", "4…
 
-## Storing SQL in character vectors
+Storing SQL in character vectors
+--------------------------------
 
 I can also assign the query above to a character vector
 (`batting_query`) and pass the vector to the `DBI::dbGetQuery()`
@@ -274,7 +285,8 @@ Griffeys %>% glimpse(78)
 Now that we see the SQL works and these two tables are joined, we can
 calculate a few new statistics in R.
 
-## Calculating On-base plus slugging (OPS)
+Calculating On-base plus slugging (OPS)
+---------------------------------------
 
 A players [on-base plus slugging
 (OPS)](https://en.wikipedia.org/wiki/On-base_plus_slugging) is a measure
@@ -320,9 +332,10 @@ GriffsOPSbyYear %>%
   ) + ggthemes::theme_fivethirtyeight()
 ```
 
-![](2-RMySQL_files/figure-gfm/plot-obs-by-year-1.png)<!-- -->
+<img src="2-RMySQL_files/figure-markdown_github/plot-obs-by-year-1.png" width="672" />
 
-## The Lahman package in R
+The Lahman package in R
+-----------------------
 
 There is also a `Lahman` package in R. I will use this below to
 demonstrate some of the similarities between `dplyr` and `MySQL` syntax.
@@ -396,4 +409,5 @@ GriffeyOPSPlot <- Master %>%
 ggplot2::ggsave(filename = "GriffeyOPSPlot.png",  width = 7, height = 5, units = "in")
 ```
 
-## End
+End
+---
