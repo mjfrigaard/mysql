@@ -16,18 +16,18 @@ Download and install the [community edition](https://dev.mysql.com/downloads/mys
 
 After downloading the dmg, you will be guided through the installation steps. On the **Configuration** options, I chose **Use Strong Password Encryption** 
 
-![](mysql-password.png)
+![](images/mysql-password.png)
 
 and on the next window I entered a password and checked the box for **Start MySQL Server once the installation is complete**
 
-![](mysql-configure.png)
+![](images/mysql-configure.png)
 
 
 Or use `brew install mysql` if you have homebrew installed. 
 
 After the install finishes, you should see the `MySQL` icon in the System Preferences:
 
-![](mysql-installed.png)
+![](images/mysql-installed.png)
 
 ## MySQL workbench (optional)
 

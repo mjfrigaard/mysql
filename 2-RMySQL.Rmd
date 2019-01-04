@@ -1,11 +1,14 @@
 ---
 title: "RMySQL in RStudio"
-output: markdowntemplates::hugo
+output: github_document
 author: "Martin Frigaard"
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE,
+                      tidy = FALSE,
+                      size = "small",
+                      fig.path = "images/")
 library(tidyverse)
 library(Lahman)
 library(markdowntemplates)
